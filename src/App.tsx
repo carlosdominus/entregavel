@@ -21,6 +21,7 @@ import {
   Users,
 } from 'lucide-react';
 import { BlueprintInspector } from './components/BlueprintInspector';
+import { BarrigaZeroPdfEmbed } from './components/BarrigaZeroPdfEmbed';
 import { OnboardingModal } from './components/OnboardingModal';
 import { WorkoutPlayerModal } from './components/WorkoutPlayerModal';
 import {
@@ -91,6 +92,11 @@ export default function App() {
 
   const barrigaZeroWorkout = useMemo(
     () => WORKOUTS_CATALOG.find((w) => w.id === 'wk_barriga_zero_1') || WORKOUTS_CATALOG[3],
+    []
+  );
+
+  const barrigaZeroIntermediateWorkout = useMemo(
+    () => WORKOUTS_CATALOG.find((w) => w.id === 'wk_barriga_zero_2') || WORKOUTS_CATALOG[4] || WORKOUTS_CATALOG[3],
     []
   );
 
@@ -403,21 +409,30 @@ export default function App() {
                     Iniciar Treino de Hoje ({dailyRecommendedWorkout.durationMinutes} min)
                   </button>
 
-                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 pt-1">
                     <button
                       type="button"
                       onClick={() => setIsOnboardingOpen(true)}
                       className="hover:text-slate-900 underline underline-offset-4"
                     >
-                      Ajustar sensibilidade articular ({userProfile.jointSensitivities.join(', ')})
+                      Ajustar sensibilidade ({userProfile.jointSensitivities.join(', ')})
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveWorkout(barrigaZeroWorkout)}
-                      className="text-[#0F766E] font-semibold hover:underline underline-offset-4"
-                    >
-                      + Protocolo Barriga Zero (10m)
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setActiveNav('bonus')}
+                        className="text-[#9A4329] font-semibold hover:underline underline-offset-4"
+                      >
+                        Abrir PDF Barriga Zero (10 págs)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveWorkout(barrigaZeroWorkout)}
+                        className="text-[#0F766E] font-semibold hover:underline underline-offset-4"
+                      >
+                        + Treino Barriga Zero (10m)
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -623,13 +638,13 @@ export default function App() {
         )}
 
         {/* =========================================================
-            TELA 6: ÁREA DE BÔNUS (PROTOCOLO BARRIGA ZERO & GUIAS PDF)
+            TELA 6: ÁREA DE BÔNUS (PROTOCOLO BARRIGA ZERO & PDF EMBED)
            ========================================================= */}
         {activeNav === 'bonus' && (
           <div className="space-y-10">
             {/* Protocolo Barriga Zero Feature Card */}
             <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
-              <div className="lg:col-span-6 relative min-h-[260px] bg-slate-900">
+              <div className="lg:col-span-5 relative min-h-[240px] bg-slate-900">
                 <img
                   src={barrigaZeroWorkout.imageUrl}
                   alt={barrigaZeroWorkout.title}
@@ -638,37 +653,53 @@ export default function App() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-6 text-white">
                   <div className="text-xs text-teal-300 font-semibold">
-                    Protocolo Extra · 10 Minutos Técnicos
+                    Protocolo Oficial Integrado · PDF Completo + Player Guiado
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-display font-semibold mt-1">
-                    Protocolo Barriga Zero: Core, Respiração & Postura
+                    Barriga Zero: Controle Abdominal, Postura & Movimento
                   </h1>
                 </div>
               </div>
 
-              <div className="lg:col-span-6 p-6 sm:p-8 flex flex-col justify-between space-y-6">
-                <div className="space-y-3">
-                  <div className="text-xs font-semibold text-[#0F766E]">
-                    Abordagem Biomecânica Real · Sem Promessas Milagrosas
+              <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between space-y-6">
+                <div className="space-y-2.5">
+                  <div className="text-xs font-semibold text-[#9A4329]">
+                    Sem Promessas Milagrosas · Consistência, Respiração e Movimento Inteligente
                   </div>
                   <p className="text-sm text-slate-700 leading-relaxed">
-                    Diferente dos abdominais tradicionais que empurram o abdômen para frente e sobrecarregam a coluna, o protocolo <strong>Barriga Zero</strong> treina o transverso abdominal (nosso cinturão natural) através da expiração costal ativa e do alinhamento pélvico.
+                    Abaixo está o <strong>PDF oficial de 10 páginas do Protocolo Barriga Zero</strong> integrado diretamente ao aplicativo. Você pode ler página por página, ampliar a fonte ou iniciar o <strong>Protocolo Básico (Pág. 4)</strong> e o <strong>Protocolo Intermediário (Pág. 5)</strong> direto no Player com cronômetro.
                   </p>
-                  <div className="pt-2 space-y-1.5 text-xs text-slate-600">
-                    <div>• Ideal para realizar 3x por semana após o treino ou antes de dormir.</div>
-                    <div>• Inclui adaptação sentada ou apoiada na parede para quem tem sensibilidade lombar.</div>
-                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveWorkout(barrigaZeroWorkout)}
-                  className="w-full sm:w-auto min-h-[50px] px-6 py-3 rounded-xl bg-[#0F766E] hover:bg-[#0D9488] text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
-                >
-                  <Play className="w-4 h-4 fill-current" />
-                  Praticar Sessão Barriga Zero Agora (10 min)
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveWorkout(barrigaZeroWorkout)}
+                    className="min-h-[48px] px-5 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#0D9488] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 transition-colors whitespace-nowrap"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    Praticar Protocolo Básico (8–10 min)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveWorkout(barrigaZeroIntermediateWorkout)}
+                    className="min-h-[48px] px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 transition-colors whitespace-nowrap"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    Praticar Protocolo Intermediário (10 min)
+                  </button>
+                </div>
               </div>
+            </section>
+
+            {/* EMBEDDED 10-PAGE BARRIGA ZERO PDF */}
+            <section aria-label="PDF Barriga Zero Integrado">
+              <BarrigaZeroPdfEmbed
+                onStartBasicProtocol={() => setActiveWorkout(barrigaZeroWorkout)}
+                onStartIntermediateProtocol={() =>
+                  setActiveWorkout(barrigaZeroIntermediateWorkout)
+                }
+              />
             </section>
 
             {/* Interactive PDF Guides & Checklists */}
