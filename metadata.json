@@ -1,0 +1,6 @@
+{
+  "name": "Fit em 30 — Método QH3X",
+  "description": "Plataforma de treinos diários em blocos de 10 minutos (Q + H + 3X), protocolo Barriga Zero e adaptações de baixo impacto para mulheres de 30 a 55 anos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
