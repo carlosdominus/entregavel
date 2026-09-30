@@ -35,6 +35,7 @@ export const WorkoutPlayerModal: React.FC<WorkoutPlayerModalProps> = ({
   const [secondsLeft, setSecondsLeft] = useState<number>(45);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [showPostCheckin, setShowPostCheckin] = useState<boolean>(false);
+  const [showDriveVideoInPlayer, setShowDriveVideoInPlayer] = useState<boolean>(true);
   const [perceivedEffort, setPerceivedEffort] =
     useState<WorkoutSessionLog['perceivedEffort']>('moderado_bom');
   const [jointComfort, setJointComfort] =
@@ -144,35 +145,90 @@ export const WorkoutPlayerModal: React.FC<WorkoutPlayerModalProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12">
             {/* Left / Main Visual & Timer Area */}
             <div className="lg:col-span-7 p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col justify-between space-y-6">
-              {/* Visual Frame with Measured Scrim */}
-              <div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-video border border-slate-200">
-                <img
-                  src={workout.imageUrl}
-                  alt={currentVariation.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover opacity-85"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20 flex flex-col justify-between p-5 text-white">
-                  <div className="flex items-center justify-between gap-2 text-xs font-medium text-slate-200">
-                    <span>{currentExercise.blockLabel}</span>
-                    <span>Foco: {currentExercise.targetArea}</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="text-xs uppercase tracking-wider text-teal-300 font-semibold">
-                      {isResting
-                        ? 'Intervalo Recuperativo — Respire Fundo'
-                        : `Modo Ativo: ${currentVariation.label}`}
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-display font-semibold text-white">
-                      {currentVariation.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-200">
-                      Cadência sugerida: {currentVariation.cadence}
-                    </p>
-                  </div>
+              {/* Toggle between Embedded Video Aula and Exercise Card */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-600">
+                  Demonstração em Vídeo & Orientação:
+                </span>
+                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setShowDriveVideoInPlayer(true)}
+                    className={`min-h-[36px] px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                      showDriveVideoInPlayer
+                        ? 'bg-[#0F766E] text-white'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Vídeo-Aula (Drive)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDriveVideoInPlayer(false)}
+                    className={`min-h-[36px] px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                      !showDriveVideoInPlayer
+                        ? 'bg-[#0F766E] text-white'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Quadro Resumo
+                  </button>
                 </div>
               </div>
+
+              {showDriveVideoInPlayer ? (
+                <div className="space-y-2">
+                  <div className="relative mx-auto w-full max-w-[320px] aspect-[9/16] rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-md">
+                    <iframe
+                      src="https://drive.google.com/file/d/1pC2_tQ6tsf4EB46VVHY2E4FcePbSn0q5/preview"
+                      title="Vídeo-Aula Oficial QH3X"
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                      allowFullScreen
+                    />
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900 text-white space-y-1">
+                    <div className="text-[11px] uppercase tracking-wider text-teal-300 font-semibold">
+                      {isResting
+                        ? 'Intervalo Recuperativo — Respire Fundo'
+                        : `${currentExercise.blockLabel} · ${currentVariation.label}`}
+                    </div>
+                    <div className="text-sm font-display font-semibold">
+                      {currentVariation.title}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Visual Frame with Measured Scrim */
+                <div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-video border border-slate-200">
+                  <img
+                    src={workout.imageUrl}
+                    alt={currentVariation.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover opacity-85"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20 flex flex-col justify-between p-5 text-white">
+                    <div className="flex items-center justify-between gap-2 text-xs font-medium text-slate-200">
+                      <span>{currentExercise.blockLabel}</span>
+                      <span>Foco: {currentExercise.targetArea}</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-xs uppercase tracking-wider text-teal-300 font-semibold">
+                        {isResting
+                          ? 'Intervalo Recuperativo — Respire Fundo'
+                          : `Modo Ativo: ${currentVariation.label}`}
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-display font-semibold text-white">
+                        {currentVariation.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-200">
+                        Cadência sugerida: {currentVariation.cadence}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Real-Time Low Impact & Regression Switcher */}
               <div className="space-y-2">

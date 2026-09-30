@@ -137,8 +137,10 @@ export const VIDEO_AULA_CHAPTERS: VideoChapter[] = [
 
 // Se você tiver o ID do arquivo no Google Drive, pode colar diretamente na constante abaixo
 // ou inserir pela interface do aplicativo:
-const DEFAULT_DRIVE_VIDEO_URL =
-  import.meta.env.VITE_QH3X_VIDEO_URL || '';
+export const OFFICIAL_DRIVE_FILE_ID = '1pC2_tQ6tsf4EB46VVHY2E4FcePbSn0q5';
+export const DEFAULT_DRIVE_VIDEO_URL =
+  import.meta.env.VITE_QH3X_VIDEO_URL ||
+  `https://drive.google.com/file/d/${OFFICIAL_DRIVE_FILE_ID}/view?usp=sharing`;
 
 interface VideoAulaQH3XProps {
   onStartVideoWorkout: () => void;
