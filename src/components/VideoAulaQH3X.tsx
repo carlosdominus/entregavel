@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   CheckCircle2,
-  Clock,
+  ExternalLink,
   FileVideo,
   Link2,
   Pause,
   Play,
   RotateCcw,
   ShieldAlert,
-  Sparkles,
+  Smartphone,
+  Monitor,
   Upload,
   Volume2,
   VolumeX,
@@ -22,8 +23,8 @@ export interface VideoChapter {
   id: string;
   title: string;
   shortLabel: string;
-  startTime: number; // seconds
-  endTime: number; // seconds
+  startTime: number;
+  endTime: number;
   timeFormatted: string;
   protocolSummary: string;
   transcript: string;
@@ -134,59 +135,97 @@ export const VIDEO_AULA_CHAPTERS: VideoChapter[] = [
   },
 ];
 
+// Se você tiver o ID do arquivo no Google Drive, pode colar diretamente na constante abaixo
+// ou inserir pela interface do aplicativo:
+const DEFAULT_DRIVE_VIDEO_URL =
+  import.meta.env.VITE_QH3X_VIDEO_URL || '';
+
 interface VideoAulaQH3XProps {
   onStartVideoWorkout: () => void;
 }
 
-function normalizeEmbedUrl(rawUrl: string): { type: 'iframe' | 'video'; src: string } | null {
-  const trimmed = rawUrl.trim();
-  if (!trimmed) return null;
+function normalizeEmbedUrl(rawInput: string): {
+  type: 'iframe' | 'video';
+  src: string;
+  openUrl?: string;
+} | null {
+  const cleaned = rawInput.trim().replace(/\s+/g, '');
+  if (!cleaned) return null;
 
-  // YouTube watch or youtu.be link -> convert to embed
-  const ytMatch = trimmed.match(
+  // Caso o usuário cole apenas o ID puro do Google Drive (ex: 1A2B3C4D5E6F7G8H9I0J...)
+  if (/^[a-zA-Z0-9_-]{25,50}$/.test(cleaned)) {
+    return {
+      type: 'iframe',
+      src: `https://drive.google.com/file/d/${cleaned}/preview`,
+      openUrl: `https://drive.google.com/file/d/${cleaned}/view`,
+    };
+  }
+
+  // Google Drive link: /file/d/ID/view ou ?id=ID
+  const driveFileMatch =
+    cleaned.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    cleaned.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
+  if (driveFileMatch) {
+    const fileId = driveFileMatch[1];
+    return {
+      type: 'iframe',
+      src: `https://drive.google.com/file/d/${fileId}/preview`,
+      openUrl: `https://drive.google.com/file/d/${fileId}/view`,
+    };
+  }
+
+  // YouTube
+  const ytMatch = cleaned.match(
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
   );
   if (ytMatch) {
-    return { type: 'iframe', src: `https://www.youtube.com/embed/${ytMatch[1]}?rel=0` };
+    return {
+      type: 'iframe',
+      src: `https://www.youtube.com/embed/${ytMatch[1]}?rel=0`,
+      openUrl: `https://www.youtube.com/watch?v=${ytMatch[1]}`,
+    };
   }
 
-  // Vimeo link -> convert to player.vimeo.com
-  const vimeoMatch = trimmed.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch && !trimmed.includes('player.vimeo.com')) {
-    return { type: 'iframe', src: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+  // Vimeo
+  const vimeoMatch = cleaned.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch && !cleaned.includes('player.vimeo.com')) {
+    return {
+      type: 'iframe',
+      src: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+      openUrl: cleaned,
+    };
   }
 
-  // Google Drive file view link -> convert to preview
-  const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-  if (driveMatch) {
-    return { type: 'iframe', src: `https://drive.google.com/file/d/${driveMatch[1]}/preview` };
-  }
-
-  // Direct video file (.mp4, .webm, .mov, blob:)
+  // Arquivo de vídeo direto (.mp4, .webm, .mov, blob:)
   if (
-    trimmed.startsWith('blob:') ||
-    /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(trimmed)
+    cleaned.startsWith('blob:') ||
+    /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(cleaned)
   ) {
-    return { type: 'video', src: trimmed };
+    return { type: 'video', src: cleaned };
   }
 
-  // Otherwise treat as iframe embed URL (Panda Video, Vturb, Loom, Wistia, etc.)
-  return { type: 'iframe', src: trimmed };
+  const withProtocol =
+    cleaned.startsWith('http://') || cleaned.startsWith('https://')
+      ? cleaned
+      : `https://${cleaned}`;
+
+  return { type: 'iframe', src: withProtocol, openUrl: withProtocol };
 }
 
 export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkout }) => {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false);
+  const [aspectMode, setAspectMode] = useState<'vertical_9_16' | 'horizontal_16_9'>('vertical_9_16');
   const [customVideoUrl, setCustomVideoUrl] = useState<string>(() => {
     try {
-      return localStorage.getItem('fit30_video_aula_url') || '';
+      return localStorage.getItem('fit30_video_aula_url') || DEFAULT_DRIVE_VIDEO_URL;
     } catch {
-      return '';
+      return DEFAULT_DRIVE_VIDEO_URL;
     }
   });
   const [urlInputDraft, setUrlInputDraft] = useState<string>(customVideoUrl);
-  const [showEmbedConfig, setShowEmbedConfig] = useState<boolean>(false);
+  const [showEmbedConfig, setShowEmbedConfig] = useState<boolean>(!customVideoUrl);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const totalDuration = 180; // 03:00
@@ -196,7 +235,6 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
       (c) => currentTime >= c.startTime && currentTime < c.endTime
     ) || VIDEO_AULA_CHAPTERS[VIDEO_AULA_CHAPTERS.length - 1];
 
-  // Timer for built-in interactive lesson player
   useEffect(() => {
     if (!isPlaying) return;
     const interval = setInterval(() => {
@@ -211,7 +249,6 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
     return () => clearInterval(interval);
   }, [isPlaying]);
 
-  // Optional speech synthesis when playing guided mode
   useEffect(() => {
     if (!('speechSynthesis' in window)) return;
     if (!isPlaying || !voiceEnabled || customVideoUrl) {
@@ -248,7 +285,9 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
     } catch {
       // ignore storage error
     }
-    setShowEmbedConfig(false);
+    if (cleaned) {
+      setShowEmbedConfig(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,6 +323,30 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Format Toggle: Vertical 9:16 (Drive Reel) vs Horizontal 16:9 */}
+          <button
+            type="button"
+            onClick={() =>
+              setAspectMode((m) =>
+                m === 'vertical_9_16' ? 'horizontal_16_9' : 'vertical_9_16'
+              )
+            }
+            className="min-h-[38px] px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-colors whitespace-nowrap"
+            title="Alternar formato Vertical 9:16 ou Horizontal 16:9"
+          >
+            {aspectMode === 'vertical_9_16' ? (
+              <>
+                <Smartphone className="w-3.5 h-3.5 text-teal-400" />
+                Formato Vertical (9:16)
+              </>
+            ) : (
+              <>
+                <Monitor className="w-3.5 h-3.5 text-teal-400" />
+                Formato Horizontal (16:9)
+              </>
+            )}
+          </button>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -297,65 +360,65 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
             className="min-h-[38px] px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-colors whitespace-nowrap"
           >
             <Upload className="w-3.5 h-3.5 text-teal-400" />
-            Selecionar Vídeo (.mp4)
+            Abrir MP4 do Computador
           </button>
 
           <button
             type="button"
             onClick={() => setShowEmbedConfig(!showEmbedConfig)}
-            className="min-h-[38px] px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-colors whitespace-nowrap"
+            className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#0F766E] hover:bg-[#0D9488] text-xs font-semibold text-white flex items-center gap-1.5 transition-colors whitespace-nowrap"
           >
-            <Link2 className="w-3.5 h-3.5 text-teal-400" />
-            {customVideoUrl ? 'Trocar Link de Embed' : 'Colar Link de Embed'}
+            <Link2 className="w-3.5 h-3.5" />
+            {customVideoUrl ? 'Trocar Link do Google Drive' : 'Conectar Link do Google Drive'}
           </button>
         </div>
       </div>
 
-      {/* Optional Embed Link Configuration Drawer */}
+      {/* Prominent Google Drive Embed Link Input Box */}
       {showEmbedConfig && (
         <form
           onSubmit={handleSaveEmbedUrl}
-          className="p-4 sm:px-6 bg-slate-100 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+          className="p-5 sm:px-6 bg-teal-950/5 border-b border-teal-800/20 space-y-3"
         >
-          <div className="flex-1">
-            <label htmlFor="video-embed-url-input" className="text-xs font-semibold text-slate-700 block mb-1">
-              Cole o link da sua vídeo-aula (YouTube, Vimeo, Panda Video, Vturb, Google Drive ou .mp4 direto):
-            </label>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-[#0F766E]">
+                Vincular Vídeo do Google Drive (MiniMax_2026-09-30_17_48_48_ad_05_voz_femin.mp4)
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Cole abaixo o link de compartilhamento do seu Google Drive (ex: <code className="bg-slate-200/70 px-1.5 py-0.5 rounded">https://drive.google.com/file/d/SEU_ID/view</code>) ou clique em <strong>"Abrir MP4 do Computador"</strong>:
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <input
               id="video-embed-url-input"
               type="text"
               value={urlInputDraft}
               onChange={(e) => setUrlInputDraft(e.target.value)}
-              placeholder="Ex: https://www.youtube.com/watch?v=... ou selecione o arquivo .mp4 no botão acima"
-              className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm focus:outline-none focus:border-[#0F766E]"
+              placeholder="Cole aqui o link do Google Drive (https://drive.google.com/file/d/.../view?usp=sharing)"
+              className="flex-1 min-h-[46px] px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm focus:outline-none focus:border-[#0F766E]"
             />
-          </div>
-          <div className="flex items-center gap-2 sm:self-end">
-            {customVideoUrl && (
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                className="min-h-[46px] px-6 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#0D9488] text-white text-xs sm:text-sm font-semibold whitespace-nowrap shadow-sm"
+              >
+                Incorporar Vídeo do Drive Agora
+              </button>
               <button
                 type="button"
-                onClick={() => {
-                  setCustomVideoUrl('');
-                  setUrlInputDraft('');
-                  try {
-                    localStorage.removeItem('fit30_video_aula_url');
-                  } catch {
-                    // ignore
-                  }
-                  setShowEmbedConfig(false);
-                }}
-                className="min-h-[42px] px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                onClick={() => fileInputRef.current?.click()}
+                className="min-h-[46px] px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 whitespace-nowrap"
               >
-                Usar Player Guiado Padrão
+                Escolher Arquivo .mp4
               </button>
-            )}
-            <button
-              type="submit"
-              className="min-h-[42px] px-5 py-2 rounded-xl bg-[#0F766E] hover:bg-[#0D9488] text-white text-xs font-semibold whitespace-nowrap"
-            >
-              Incorporar Vídeo
-            </button>
+            </div>
           </div>
+          <p className="text-[11px] text-slate-500">
+            Importante no Google Drive: certifique-se de que o arquivo está com acesso <strong>"Qualquer pessoa com o link"</strong> para que o player reproduza sem pedir login.
+          </p>
         </form>
       )}
 
@@ -365,7 +428,13 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
         <div className="lg:col-span-7 p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col justify-between space-y-5">
           {parsedEmbed ? (
             <div className="space-y-3">
-              <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-inner">
+              <div
+                className={`relative mx-auto rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-md ${
+                  aspectMode === 'vertical_9_16'
+                    ? 'w-full max-w-[340px] aspect-[9/16]'
+                    : 'w-full aspect-video'
+                }`}
+              >
                 {parsedEmbed.type === 'video' ? (
                   <video
                     src={parsedEmbed.src}
@@ -378,22 +447,37 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
                 ) : (
                   <iframe
                     src={parsedEmbed.src}
-                    title="Vídeo-Aula Oficial Método QH3X"
+                    title="Vídeo-Aula Oficial Método QH3X (Google Drive)"
                     className="w-full h-full border-0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                     allowFullScreen
                   />
                 )}
               </div>
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>Vídeo incorporado ativo · Duração da aula: 03:00</span>
-                <button
-                  type="button"
-                  onClick={() => setShowEmbedConfig(true)}
-                  className="text-[#0F766E] font-semibold hover:underline"
-                >
-                  Alterar fonte do vídeo
-                </button>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200">
+                <span className="font-medium text-slate-800">
+                  Vídeo-aula incorporada ativa ({aspectMode === 'vertical_9_16' ? 'Formato Vertical 9:16' : 'Formato 16:9'})
+                </span>
+                <div className="flex items-center gap-3">
+                  {parsedEmbed.openUrl && (
+                    <a
+                      href={parsedEmbed.openUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-slate-600 hover:text-slate-900 flex items-center gap-1"
+                    >
+                      Abrir no Drive <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowEmbedConfig(true)}
+                    className="text-[#0F766E] font-semibold hover:underline"
+                  >
+                    Trocar Link
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -423,7 +507,6 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
                     <div className="text-xs text-teal-200 font-medium">
                       {currentChapter.protocolSummary}
                     </div>
-                    {/* Synchronized Caption Box */}
                     <div className="p-3.5 rounded-xl bg-black/70 border border-white/15 text-xs sm:text-sm text-slate-100 leading-relaxed max-h-28 overflow-y-auto">
                       “{currentChapter.transcript}”
                     </div>
@@ -467,7 +550,7 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
                       ) : (
                         <>
                           <Play className="w-4 h-4 fill-current" />
-                          Assistir Aula Guiada
+                          Assistir Roteiro Sincronizado
                         </>
                       )}
                     </button>
@@ -497,12 +580,12 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
                     {voiceEnabled ? (
                       <>
                         <Volume2 className="w-4 h-4" />
-                        Narração em Voz Ativa
+                        Narração Ativa
                       </>
                     ) : (
                       <>
                         <VolumeX className="w-4 h-4" />
-                        Ativar Narração em Voz
+                        Ativar Narração
                       </>
                     )}
                   </button>
@@ -517,7 +600,7 @@ export const VideoAulaQH3X: React.FC<VideoAulaQH3XProps> = ({ onStartVideoWorkou
               <span className="text-xs font-semibold text-[#0F766E]">
                 Exercícios Demonstrados neste Trecho ({currentChapter.timeFormatted})
               </span>
-              <span className="text-xs text-slate-500">Toque nos capítulos ao lado para avançar</span>
+              <span className="text-xs text-slate-500">Toque nos capítulos ao lado</span>
             </div>
             <ul className="space-y-1.5 text-xs sm:text-sm text-slate-800">
               {currentChapter.exercisesList.map((item, idx) => (
