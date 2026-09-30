@@ -23,6 +23,7 @@ import {
 import { BlueprintInspector } from './components/BlueprintInspector';
 import { BarrigaZeroPdfEmbed } from './components/BarrigaZeroPdfEmbed';
 import { OnboardingModal } from './components/OnboardingModal';
+import { VideoAulaQH3X } from './components/VideoAulaQH3X';
 import { WorkoutPlayerModal } from './components/WorkoutPlayerModal';
 import {
   BONUS_GUIDES_PDF,
@@ -437,6 +438,11 @@ export default function App() {
                 </div>
               </div>
             </section>
+
+            {/* Official Embedded Video Lesson QH3X (03:00) */}
+            <VideoAulaQH3X
+              onStartVideoWorkout={() => setActiveWorkout(WORKOUTS_CATALOG[0])}
+            />
 
             {/* Method Explanation Strip: Why QH3X works for 30-55 without joint pain */}
             <section className="pt-4 border-t border-slate-200">
